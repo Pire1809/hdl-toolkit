@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from . import __version__
 from .builder import build_from_csv
 from .client import HdlClient, HdlError, LoadResult, derive_status
+from .errors import build_retry_files, collect_errors, load_dat_sources
 from .package import build_zip
 from .validator import Issue, Severity, has_errors, validate_path, validate_text
 
@@ -181,6 +182,40 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_errors(args: argparse.Namespace) -> int:
+    sources = load_dat_sources(args.dat or [])
+    if args.retry_dir and not sources:
+        raise SystemExit("error: --retry-dir needs the original files, pass them with --dat")
+
+    client = _client()
+    messages = list(client.iter_messages(args.request_id))
+    report = collect_errors(messages, sources, include_warnings=args.all)
+
+    csv_text = report.to_csv()
+    if args.output:
+        with open(args.output, "w", encoding="utf-8", newline="") as fh:
+            fh.write(csv_text)
+    else:
+        sys.stdout.write(csv_text)
+
+    unmatched = sum(1 for r in report.rows if sources and not r.line_ref)
+    print(
+        f"{len(report.rows)} message(s) on {report.failed_lines} line(s)"
+        + (f", {unmatched} not matched to a line" if unmatched else "")
+        + (f"; wrote {args.output}" if args.output else ""),
+        file=sys.stderr,
+    )
+
+    if args.retry_dir:
+        os.makedirs(args.retry_dir, exist_ok=True)
+        for dat_file, hdl in build_retry_files(sources, report.retry_refs).items():
+            path = os.path.join(args.retry_dir, dat_file)
+            hdl.write(path)
+            rows = sum(len(b.lines) for b in hdl.blocks)
+            print(f"wrote {path}: {rows} line(s) to fix and resubmit", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hdl", description="Build, validate, package and load Oracle HCM HDL files."
@@ -244,6 +279,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser(
+        "errors", help="export a data set's errors to CSV, joined to the source lines"
+    )
+    p.add_argument("request_id")
+    p.add_argument(
+        "--dat",
+        nargs="+",
+        metavar="FILE",
+        help="the submitted .dat files or .zip, to include the original lines",
+    )
+    p.add_argument("-o", "--output", help="CSV file to write (default: stdout)")
+    p.add_argument(
+        "--retry-dir",
+        metavar="DIR",
+        help="write .dat files with only the failed logical objects, to fix and resubmit",
+    )
+    p.add_argument("--all", action="store_true", help="include warnings, not only errors")
+    p.set_defaults(func=cmd_errors)
 
     return parser
 

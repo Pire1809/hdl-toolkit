@@ -54,3 +54,42 @@ def test_submit_requires_credentials(tmp_path, monkeypatch):
         assert "HCM_INSTANCE_URL" in str(exc)
     else:
         raise AssertionError("expected SystemExit")
+
+
+def test_errors_command(tmp_path, monkeypatch, capsys):
+    import json
+
+    from hdl_toolkit import cli
+
+    fixtures = Path(__file__).parent / "fixtures"
+    messages = json.loads((fixtures / "import_errors_messages.json").read_text())
+    dat = tmp_path / "Worker.dat"
+    dat.write_text((fixtures / "import_errors_Worker.dat").read_text())
+
+    class FakeClient:
+        def iter_messages(self, request_id):
+            assert request_id == "64869744"
+            return iter(messages)
+
+    monkeypatch.setattr(cli, "_client", lambda: FakeClient())
+    out, retry = tmp_path / "errors.csv", tmp_path / "retry"
+
+    code = main(
+        ["errors", "64869744", "--dat", str(dat), "-o", str(out), "--retry-dir", str(retry)]
+    )
+
+    assert code == 0
+    assert out.read_text().count("\n") == 4  # header + 3 messages
+    assert "HDLTK_ERR_1" not in (retry / "Worker.dat").read_text()
+    err = capsys.readouterr().err
+    assert "3 message(s) on 2 line(s)" in err
+    assert "2 line(s) to fix and resubmit" in err
+
+
+def test_errors_retry_needs_dat(monkeypatch):
+    try:
+        main(["errors", "1", "--retry-dir", "x"])
+    except SystemExit as exc:
+        assert "--dat" in str(exc)
+    else:
+        raise AssertionError("expected SystemExit")

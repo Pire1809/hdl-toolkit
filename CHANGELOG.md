@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- New `hdl errors` command and `collect_errors` / `build_retry_files` API.
+  They export a data set's messages to CSV, joined to the original `.dat`
+  lines, and write retry files that contain only the failed logical objects
+  (#2). The message format was verified against a live pod.
+- `HdlClient.iter_messages` follows pagination. Before, `get_messages` read
+  only the first page.
+
 ## 0.1.0 (2026-09-30)
 
 First release.

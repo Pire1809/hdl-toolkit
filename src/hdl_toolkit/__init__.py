@@ -2,6 +2,7 @@
 
 from .builder import build_from_csv, read_csv
 from .client import HdlClient, HdlError, LoadResult, derive_status
+from .errors import ErrorReport, build_retry_files, collect_errors, load_dat_sources
 from .model import NULL, Block, HdlFile
 from .package import build_zip
 from .parser import parse, parse_file
@@ -18,7 +19,11 @@ __all__ = [
     "Issue",
     "LoadResult",
     "Severity",
+    "ErrorReport",
     "build_from_csv",
+    "build_retry_files",
+    "collect_errors",
+    "load_dat_sources",
     "build_zip",
     "derive_status",
     "has_errors",

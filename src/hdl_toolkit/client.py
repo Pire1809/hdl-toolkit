@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -170,22 +170,40 @@ class HdlClient:
         response.raise_for_status()
         return response.json()
 
+    def iter_messages(
+        self, request_id: int | str, *, page_size: int = 500
+    ) -> Iterator[dict[str, Any]]:
+        """Yield every raw message item for a data set, following pagination."""
+        offset = 0
+        while True:
+            response = self.session.get(
+                f"{self.base_url}/dataLoadDataSets/{request_id}/child/messages",
+                params={"onlyData": "true", "limit": page_size, "offset": offset},
+                headers={"Accept": "application/json"},
+                timeout=60,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            items = payload.get("items", [])
+            yield from items
+            if not payload.get("hasMore") or not items:
+                return
+            offset += len(items)
+
     def get_messages(self, request_id: int | str, limit: int = 25) -> list[dict[str, Any]]:
-        response = self.session.get(
-            f"{self.base_url}/dataLoadDataSets/{request_id}/child/messages",
-            params={"onlyData": "true", "limit": limit},
-            headers={"Accept": "application/json"},
-            timeout=60,
-        )
-        response.raise_for_status()
-        return [
-            {
-                "type": item.get("MessageTypeCode"),
-                "process": item.get("OriginatingProcessCode"),
-                "message": item.get("MessageText"),
-            }
-            for item in response.json().get("items", [])
-        ]
+        """Return up to ``limit`` messages, trimmed to their operational fields."""
+        messages = []
+        for item in self.iter_messages(request_id, page_size=min(limit, 500)):
+            messages.append(
+                {
+                    "type": item.get("MessageTypeCode"),
+                    "process": item.get("OriginatingProcessCode"),
+                    "message": item.get("MessageText"),
+                }
+            )
+            if len(messages) >= limit:
+                break
+        return messages
 
     # -- high level --------------------------------------------------------
 

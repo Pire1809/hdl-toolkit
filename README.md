@@ -21,6 +21,7 @@ Loading data into Oracle Fusion HCM with HDL usually means hand-editing pipe-del
 - **Validate** before uploading: data lines before `METADATA`, column-count mismatches, duplicate attributes, duplicate record keys (date-effective aware), non-`YYYY/MM/DD` dates, missing keys, and a file name that doesn't match the top-level object.
 - **Package** `.dat` files with `ClobFiles/` and `BlobFiles/` attachments into an HDL-ready ZIP.
 - **Submit** through the `dataLoadDataSets` REST API: upload, import and load, poll until the load finishes, then show the error messages.
+- **Explain failures**: `hdl errors` joins Oracle's messages back to your original `.dat` lines, exports them to CSV, and writes a retry file that contains only the failed logical objects.
 - **Report honestly**: a load that Oracle marks `SUCCESS` but that has object-level errors is reported as `FAILED`, and one with unprocessed objects as `WARNING`.
 - One runtime dependency (`requests`). Typed and tested.
 
@@ -117,6 +118,26 @@ hdl status 300000123456789 --messages
 
 For data sets submitted with `--import-only`, add `--import-only` here too, so a finished import is reported as final.
 
+### Turn load errors into a CSV and a retry file
+
+```bash
+hdl errors 64869744 --dat Worker.dat -o errors.csv --retry-dir retry/
+```
+
+```text
+3 message(s) on 2 line(s); wrote errors.csv
+wrote retry/Worker.dat: 2 line(s) to fix and resubmit
+```
+
+`errors.csv` holds one row per message, with the original line next to it:
+
+| dat_file | file_line | object | source_system_id | phase | message | original_line |
+|---|---|---|---|---|---|---|
+| Worker.dat | 3 | Worker | HDLTK_ERR_2 | IMPORT | You must enter the date for the EffectiveStartDate attribute in YYYY/MM/DD format. | `MERGE\|Worker\|…\|2026/13/45\|…` |
+| Worker.dat | 4 | Worker | HDLTK_ERR_3 | IMPORT | The number of values in line 4 doesn't equal the number of attributes defined in the METADATA line… | `MERGE\|Worker\|…\|HIRE\|EXTRA` |
+
+When any line of a logical object fails, HDL rejects the whole object: the Worker together with its PersonName, WorkRelationship, Assignment and so on. So `retry/Worker.dat` contains **every line of each failed logical object**. It finds them by following the `...(SourceSystemId)` references in your file and keeps the `SET` instructions. Fix the rows it contains, then resubmit it. `--dat` also accepts the `.zip` you submitted. Without `--dat`, you still get the CSV, just without the original lines.
+
 ## Python API
 
 ```python
@@ -182,7 +203,6 @@ It checks **structure**, not Oracle business rules. It doesn't know which attrib
 
 - [ ] Attribute catalogs per business object (Worker, Assignment, Salary, …) for stricter validation
 - [ ] Excel (`.xlsx`) sources
-- [ ] Parse HDL error reports back into row-level CSVs
 - [ ] OAuth / JWT authentication
 - [ ] BI Publisher report as a source, as in [oracle-hcm-hdl-azure-function](https://github.com/Pire1809/oracle-hcm-hdl-azure-function)
 

@@ -193,3 +193,27 @@ def test_message_failure_does_not_change_result():
     result = client.submit(b"z", "Worker.zip")
     assert result.status == "SUCCESS"
     assert result.messages == []
+
+
+def test_iter_messages_follows_pagination():
+    client, session = make_client(
+        [
+            FakeResponse(
+                payload={"items": [{"MessageText": "a"}, {"MessageText": "b"}], "hasMore": True}
+            ),
+            FakeResponse(payload={"items": [{"MessageText": "c"}], "hasMore": False}),
+        ]
+    )
+    assert [m["MessageText"] for m in client.iter_messages(9, page_size=2)] == ["a", "b", "c"]
+    assert [c[2]["params"]["offset"] for c in session.calls] == [0, 2]
+
+
+def test_get_messages_respects_limit():
+    client, _ = make_client(
+        [
+            FakeResponse(
+                payload={"items": [{"MessageText": str(i)} for i in range(5)], "hasMore": True}
+            )
+        ]
+    )
+    assert len(client.get_messages(9, limit=3)) == 3
