@@ -2,11 +2,14 @@
 
 ## 0.1.0 (2026-09-30)
 
-- Fix: `hdl submit --import-only` waited for a load that never starts and
-  timed out. Import-only data sets are now final once the import finishes
-  (verified against a live pod). `hdl status` gains `--import-only`.
-- The final report now shows file-line import counts.
+First release.
 
-- First release: `HdlFile` model, parser, validator, CSV builder, ZIP packaging,
-  `dataLoadDataSets` REST client and the `hdl` CLI (`build`, `validate`,
-  `package`, `submit`, `status`).
+- `HdlFile` model and parser for `.dat` files, with pipe escaping and `#NULL`.
+- Structural validator: data lines before METADATA, column counts, duplicate
+  attributes and record keys (date-effective aware), date formats, missing keys,
+  file name vs. top-level object.
+- CSV builder and ZIP packaging with `ClobFiles/` and `BlobFiles/`.
+- `dataLoadDataSets` REST client: upload, submit, poll and read messages.
+  `IMPORT_ONLY` submissions are final once the import finishes (verified
+  against a live pod).
+- `hdl` CLI: `build`, `validate`, `package`, `submit`, `status`.
