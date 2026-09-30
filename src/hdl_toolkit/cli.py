@@ -125,6 +125,11 @@ def _report(result: LoadResult, as_json: bool) -> None:
         print(f"content id: {result.content_id}")
     if ds:
         print(
+            f"file lines: {ds.get('FileLineImportSuccessCount') or 0} imported / "
+            f"{ds.get('FileLineImportErrorCount') or 0} failed "
+            f"(of {ds.get('FileLineTotalCount') or 0})"
+        )
+        print(
             f"objects:    {ds.get('ObjectSuccessCount') or 0} ok / "
             f"{ds.get('ObjectLoadErrorCount') or 0} failed / "
             f"{ds.get('ObjectUnprocessedCount') or 0} unprocessed "
@@ -168,7 +173,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     client = _client()
     data_set = client.get_data_set(args.request_id)
     messages = client.get_messages(args.request_id) if args.messages else []
-    status = derive_status(data_set) or "IN_PROGRESS"
+    status = derive_status(data_set, import_only=args.import_only) or "IN_PROGRESS"
     _report(
         LoadResult(status, args.request_id, data_set.get("ContentId"), data_set, messages),
         args.json,
@@ -234,6 +239,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("status", help="show the status of a submitted data set")
     p.add_argument("request_id")
     p.add_argument("--messages", action="store_true", help="include error messages")
+    p.add_argument(
+        "--import-only", action="store_true", help="the data set was submitted with --import-only"
+    )
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_status)
 

@@ -114,6 +114,8 @@ Check a load that was submitted earlier:
 hdl status 300000123456789 --messages
 ```
 
+For data sets submitted with `--import-only`, add `--import-only` here too, so a finished import is reported as final.
+
 ## Python API
 
 ```python

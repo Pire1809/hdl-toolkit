@@ -38,13 +38,16 @@ class HdlError(RuntimeError):
     """Raised when Oracle rejects a request."""
 
 
-def derive_status(data_set: dict[str, Any]) -> str | None:
+def derive_status(data_set: dict[str, Any], *, import_only: bool = False) -> str | None:
     """Map a data set payload to SUCCESS / WARNING / FAILED.
 
     Returns ``None`` while Oracle is still processing. A load that "succeeds"
     with object-level errors is reported as FAILED, and one that leaves
     objects unprocessed as WARNING, because Oracle's own status code alone
     hides both cases.
+
+    With ``import_only`` the data set is final once the import finishes: the
+    load never starts and stays ``UNPROCESSED``.
     """
 
     def code(key: str) -> str:
@@ -62,6 +65,11 @@ def derive_status(data_set: dict[str, Any]) -> str | None:
 
     if {transfer, import_, load} & FAILURE_CODES or "ERROR" in overall or "CANCEL" in overall:
         return "FAILED"
+
+    if import_only:
+        if import_ in ("SUCCESS", "WARNING"):
+            return "FAILED" if count("FileLineImportErrorCount") else import_
+        return None
 
     if load == "SUCCESS":
         errors = (
@@ -187,6 +195,7 @@ class HdlClient:
         *,
         poll_interval: float = 30,
         timeout: float = 900,
+        import_only: bool = False,
         on_poll: Callable[[dict[str, Any]], None] | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """Poll until the data set is final; return ``(status, data_set)``.
@@ -205,7 +214,7 @@ class HdlClient:
             else:
                 if on_poll:
                     on_poll(last)
-                status = derive_status(last)
+                status = derive_status(last, import_only=import_only)
                 if status:
                     return status, last
             if self._clock() >= deadline:
@@ -236,7 +245,11 @@ class HdlClient:
             return LoadResult("SUBMITTED", request_id, content_id, {})
 
         status, data_set = self.wait(
-            request_id, poll_interval=poll_interval, timeout=timeout, on_poll=on_poll
+            request_id,
+            poll_interval=poll_interval,
+            timeout=timeout,
+            import_only=file_action.upper() == "IMPORT_ONLY",
+            on_poll=on_poll,
         )
         try:
             messages = self.get_messages(request_id)

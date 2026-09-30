@@ -73,6 +73,56 @@ def test_derive_status(data_set, expected):
     assert derive_status(data_set) == expected
 
 
+# Payload seen from a real pod after an IMPORT_ONLY submission.
+IMPORTED = {
+    "TransferStatusCode": "SUCCESS",
+    "ImportStatusCode": "SUCCESS",
+    "LoadStatusCode": "UNPROCESSED",
+}
+
+
+@pytest.mark.parametrize(
+    "data_set, expected",
+    [
+        (
+            {
+                "TransferStatusCode": "SUCCESS",
+                "ImportStatusCode": "IN_PROGRESS",
+                "LoadStatusCode": "NOT_READY",
+            },
+            None,
+        ),
+        (IMPORTED, "SUCCESS"),
+        ({**IMPORTED, "FileLineImportErrorCount": 3}, "FAILED"),
+        ({**IMPORTED, "ImportStatusCode": "WARNING"}, "WARNING"),
+        ({**IMPORTED, "ImportStatusCode": "ERROR"}, "FAILED"),
+    ],
+)
+def test_derive_status_import_only(data_set, expected):
+    assert derive_status(data_set, import_only=True) == expected
+
+
+def test_import_and_load_keeps_waiting_after_import():
+    # Same payload mid-way through IMPORT_AND_LOAD is not final yet.
+    assert derive_status(IMPORTED) is None
+
+
+def test_submit_import_only_stops_after_import():
+    client, session = make_client(
+        [
+            FakeResponse(payload={"result": {"ContentId": "C"}}),
+            FakeResponse(payload={"result": {"RequestId": 64869600}}),
+            FakeResponse(payload={**IMPORTED, "ImportStatusCode": "IN_PROGRESS"}),
+            FakeResponse(payload=IMPORTED),
+            FakeResponse(payload={"items": []}),
+        ]
+    )
+    result = client.submit(b"z", "Worker.zip", file_action="IMPORT_ONLY")
+    assert result.status == "SUCCESS"
+    assert session.calls[1][2]["json"]["fileAction"] == "IMPORT_ONLY"
+    assert session.responses == []
+
+
 def test_submit_happy_path():
     client, session = make_client(
         [
