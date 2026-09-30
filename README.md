@@ -1,6 +1,7 @@
 # hdl-toolkit
 
 [![CI](https://github.com/Pire1809/hdl-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Pire1809/hdl-toolkit/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/hdl-toolkit)](https://pypi.org/project/hdl-toolkit/)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
