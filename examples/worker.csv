@@ -1,0 +1,3 @@
+SourceSystemOwner,SourceSystemId,EffectiveStartDate,EffectiveEndDate,PersonNumber,StartDate,ActionCode
+HRC_SQLLOADER,EMP_1001,2026/10/01,4712/12/31,1001,2026/10/01,HIRE
+HRC_SQLLOADER,EMP_1002,2026/10/01,4712/12/31,1002,2026/10/01,HIRE

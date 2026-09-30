@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hdl-toolkit"
+dynamic = ["version"]
+description = "Build, validate, package and load Oracle HCM Data Loader (HDL) files."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Alfredo Reyes" }]
+requires-python = ">=3.10"
+dependencies = ["requests>=2.28"]
+keywords = ["oracle", "hcm", "hdl", "hcm-data-loader", "fusion", "integration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov", "ruff"]
+
+[project.scripts]
+hdl = "hdl_toolkit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Pire1809/hdl-toolkit"
+Issues = "https://github.com/Pire1809/hdl-toolkit/issues"
+
+[tool.hatch.version]
+path = "src/hdl_toolkit/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hdl_toolkit"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

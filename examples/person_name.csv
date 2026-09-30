@@ -1,0 +1,3 @@
+SourceSystemOwner,SourceSystemId,PersonId(SourceSystemId),EffectiveStartDate,EffectiveEndDate,LegislationCode,NameType,FirstName,LastName
+HRC_SQLLOADER,EMP_1001_NAME,EMP_1001,2026/10/01,4712/12/31,US,GLOBAL,Ana,García
+HRC_SQLLOADER,EMP_1002_NAME,EMP_1002,2026/10/01,4712/12/31,US,GLOBAL,Luis,Pérez | Soto

@@ -1,0 +1,3 @@
+SourceSystemOwner,SourceSystemId,PersonId(SourceSystemId),DateFrom,EmailType,EmailAddress,PrimaryFlag
+HRC_SQLLOADER,EMP_1001_EMAIL,EMP_1001,2026/10/01,W1,ana.garcia@example.com,Y
+HRC_SQLLOADER,EMP_1002_EMAIL,EMP_1002,2026/10/01,W1,luis.perez@example.com,Y
